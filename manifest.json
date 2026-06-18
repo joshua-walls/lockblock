@@ -1,9 +1,9 @@
 {
   "id": "lockblock",
   "name": "Lockblock",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "minAppVersion": "1.11.4",
-  "description": "Keep sensitive Obsidian note sections encrypted until you choose to reveal them.",
+  "description": "Keep sensitive note sections encrypted until you choose to reveal them.",
   "author": "Joshua Walls",
   "authorUrl": "https://github.com/joshua-walls",
   "isDesktopOnly": false
