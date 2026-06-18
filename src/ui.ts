@@ -24,16 +24,6 @@ export class LockblockSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Encryption").setHeading();
 
     new Setting(containerEl)
-      .setName("Auto-encrypt plaintext lockblock blocks")
-      .setDesc("When unlocked, plaintext lockblock code blocks in the active note are sealed automatically.")
-      .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.autoEncryptPlaintextBlocks).onChange(async (value) => {
-          this.plugin.settings.autoEncryptPlaintextBlocks = value;
-          await this.plugin.saveSettings();
-        }),
-      );
-
-    new Setting(containerEl)
       .setName("Encrypt when entering reading view")
       .setDesc("Seal plaintext lockblock blocks before showing the note in reading view.")
       .addToggle((toggle) =>
