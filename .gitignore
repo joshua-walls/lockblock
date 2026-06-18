@@ -1,0 +1,14 @@
+node_modules/
+main.js
+data.json
+.DS_Store
+.env
+dist/
+coverage/
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.7z
+proposals/

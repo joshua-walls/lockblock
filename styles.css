@@ -1,0 +1,68 @@
+.lockblock-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--background-secondary);
+}
+
+.lockblock-card-clickable {
+  cursor: pointer;
+}
+
+.lockblock-card-clickable:hover {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.lockblock-card-title {
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+.lockblock-card-message {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.lockblock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.lockblock-small-button {
+  font-size: var(--font-ui-smaller);
+  padding: 2px 8px;
+}
+
+.lockblock-revealed,
+.lockblock-plaintext-modal {
+  margin: 10px 0 0;
+  padding: 10px;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.lockblock-recovery-key {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  font-family: var(--font-monospace);
+}
+
+.lockblock-slider-value {
+  min-width: 3.5em;
+  margin-left: 8px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.lockblock-notice-button {
+  margin-left: 10px;
+}
