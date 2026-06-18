@@ -1,5 +1,4 @@
 export interface LockblockSettings {
-  autoEncryptPlaintextBlocks: boolean;
   autoEncryptOnReadingView: boolean;
   autoHideRevealedSeconds: number;
   copyWithoutReveal: boolean;

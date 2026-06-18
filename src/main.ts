@@ -24,7 +24,6 @@ export default class LockblockPlugin extends Plugin {
   private keyring: LockblockKeyring;
   private revealed = new Map<string, RevealedEntry>();
   private renderCallbacks = new Set<() => void>();
-  private autoEncryptTimer: number | null = null;
   private backgroundLockTimer: number | null = null;
   private sessionLockTimer: number | null = null;
   private markdownRefreshTimer: number | null = null;
@@ -43,7 +42,6 @@ export default class LockblockPlugin extends Plugin {
     this.registerMarkdownPostProcessor((el, ctx) => this.renderReadingLockblockBlocks(el, ctx));
     await this.registerEditProtection();
     this.registerCommands();
-    this.registerAutoEncrypt();
     this.registerMarkdownRefresh();
     this.registerViewAutomation();
     this.registerBackgroundLock();
@@ -303,7 +301,7 @@ export default class LockblockPlugin extends Plugin {
   }
 
   runRotateVaultKey(): void {
-    new Notice("Vault-key rotation is planned after the mvp migration flow.");
+    new Notice("Vault-key rotation is reserved for a future migration flow.");
   }
 
   private forgetSessionKeys(): void {
@@ -761,11 +759,6 @@ export default class LockblockPlugin extends Plugin {
     this.revealed.delete(key);
   }
 
-  private registerAutoEncrypt(): void {
-    // Plaintext blocks stay editable in source/live preview while unlocked.
-    // They are re-sealed when entering reading view, locking, or running the manual encrypt command.
-  }
-
   private registerMarkdownRefresh(): void {
     this.registerEvent(this.app.workspace.on("file-open", () => this.scheduleMarkdownRefresh()));
     this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.scheduleMarkdownRefresh()));
@@ -922,10 +915,6 @@ export default class LockblockPlugin extends Plugin {
   }
 
   private clearTimers(): void {
-    if (this.autoEncryptTimer !== null) {
-      window.clearTimeout(this.autoEncryptTimer);
-      this.autoEncryptTimer = null;
-    }
     if (this.markdownRefreshTimer !== null) {
       window.clearTimeout(this.markdownRefreshTimer);
       this.markdownRefreshTimer = null;
