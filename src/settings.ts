@@ -1,7 +1,9 @@
 import { DEFAULT_AUTO_HIDE_SECONDS, DEFAULT_BACKGROUND_LOCK_MINUTES, DEFAULT_KDF_ITERATIONS, DEFAULT_SESSION_LOCK_MINUTES } from "./constants";
+import { LockblockKeyring } from "./keyring";
 import type { LockblockSettings } from "./types";
 
 export const DEFAULT_SETTINGS: LockblockSettings = {
+  syncedKeyring: null,
   autoEncryptOnReadingView: true,
   autoHideRevealedSeconds: DEFAULT_AUTO_HIDE_SECONDS,
   copyWithoutReveal: true,
@@ -13,6 +15,7 @@ export const DEFAULT_SETTINGS: LockblockSettings = {
 
 export function normalizeSettings(data: Partial<LockblockSettings> | null | undefined): LockblockSettings {
   return {
+    syncedKeyring: LockblockKeyring.isKeyring(data?.syncedKeyring) ? data.syncedKeyring : DEFAULT_SETTINGS.syncedKeyring,
     autoEncryptOnReadingView: data?.autoEncryptOnReadingView ?? DEFAULT_SETTINGS.autoEncryptOnReadingView,
     autoHideRevealedSeconds: numberOrDefault(data?.autoHideRevealedSeconds, DEFAULT_SETTINGS.autoHideRevealedSeconds, 0, 86_400),
     copyWithoutReveal: data?.copyWithoutReveal ?? DEFAULT_SETTINGS.copyWithoutReveal,

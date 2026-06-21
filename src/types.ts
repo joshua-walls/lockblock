@@ -1,4 +1,5 @@
 export interface LockblockSettings {
+  syncedKeyring: Keyring | null;
   autoEncryptOnReadingView: boolean;
   autoHideRevealedSeconds: number;
   copyWithoutReveal: boolean;

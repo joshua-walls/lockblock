@@ -131,23 +131,42 @@ export class LockblockSettingTab extends PluginSettingTab {
 
     new Setting(containerEl).setName("Commands").setHeading();
 
-    new Setting(containerEl)
+    const sessionActions = new Setting(containerEl)
       .setName("Setup and session")
       .addButton((button) => button.setButtonText("Setup").onClick(() => void this.plugin.runSetup()))
       .addButton((button) => button.setButtonText("Unlock").onClick(() => void this.plugin.runUnlock()))
       .addButton((button) => button.setButtonText("Lock").onClick(() => this.plugin.runLock()))
       .addButton((button) => button.setButtonText("Forget keys").onClick(() => this.plugin.runForgetSessionKeys()));
+    sessionActions.settingEl.addClass("lockblock-setting-actions");
 
-    new Setting(containerEl)
+    const visibilityActions = new Setting(containerEl)
       .setName("Visibility")
       .addButton((button) => button.setButtonText("Hide revealed").onClick(() => this.plugin.runHideRevealedBlocks()));
+    visibilityActions.settingEl.addClass("lockblock-setting-actions");
 
-    new Setting(containerEl)
-      .setName("Key management")
+    new Setting(containerEl).setName("Key management").setHeading();
+
+    const passwordActions = new Setting(containerEl)
+      .setName("Password")
       .addButton((button) => button.setButtonText("Change password").onClick(() => void this.plugin.runChangePassword()))
-      .addButton((button) => button.setButtonText("Show recovery key").onClick(() => void this.plugin.runShowRecovery()))
-      .addButton((button) => button.setButtonText("Restore recovery").onClick(() => void this.plugin.runRestoreFromRecovery()))
+      .addButton((button) => button.setButtonText("Show recovery key").onClick(() => void this.plugin.runShowRecovery()));
+    passwordActions.settingEl.addClass("lockblock-setting-actions");
+
+    const recoveryActions = new Setting(containerEl)
+      .setName("Recovery")
+      .addButton((button) => button.setButtonText("Restore recovery").onClick(() => void this.plugin.runRestoreFromRecovery()));
+    recoveryActions.settingEl.addClass("lockblock-setting-actions");
+
+    const syncActions = new Setting(containerEl)
+      .setName("Device sync")
+      .addButton((button) => button.setButtonText("Sync keyring").onClick(() => void this.plugin.runSyncKeyringToSettings()))
+      .addButton((button) => button.setButtonText("Import synced keyring").onClick(() => void this.plugin.runImportSyncedKeyring()));
+    syncActions.settingEl.addClass("lockblock-setting-actions");
+
+    const rotationActions = new Setting(containerEl)
+      .setName("Rotation")
       .addButton((button) => button.setButtonText("Rotate vault key").onClick(() => this.plugin.runRotateVaultKey()));
+    rotationActions.settingEl.addClass("lockblock-setting-actions");
   }
 }
 
@@ -194,6 +213,15 @@ class PasswordModal extends Modal {
       addPasswordField(contentEl, this.purpose === "setup" ? "Unlock password" : "Password", (value) => (values.password = value));
     }
 
+    contentEl.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      event.preventDefault();
+      this.submit(values);
+    });
+
     new Setting(contentEl)
       .addButton((button) =>
         button.setButtonText("Cancel").onClick(() => {
@@ -204,11 +232,7 @@ class PasswordModal extends Modal {
         button
           .setButtonText(primaryTextForPurpose(this.purpose))
           .setCta()
-          .onClick(() => {
-            this.submitted = true;
-            this.resolve(values);
-            this.close();
-          }),
+          .onClick(() => this.submit(values)),
       );
   }
 
@@ -217,6 +241,16 @@ class PasswordModal extends Modal {
     if (!this.submitted) {
       this.resolve(null);
     }
+  }
+
+  private submit(values: PasswordModalResult): void {
+    if (this.submitted) {
+      return;
+    }
+
+    this.submitted = true;
+    this.resolve(values);
+    this.close();
   }
 }
 

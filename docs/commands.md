@@ -15,6 +15,8 @@ Quick reference for the command palette.
 | Lockblock: Change unlock password | Re-wraps the vault key with a new unlock password. Existing encrypted blocks do not change. |
 | Lockblock: Show recovery key | Verifies your password, creates a fresh recovery key, and shows it for safe storage. |
 | Lockblock: Restore from recovery key | Uses a recovery key to regain access and set a new unlock password. |
+| Lockblock: Sync keyring to plugin settings | Writes the wrapped keyring backup into Lockblock plugin settings for devices that sync plugin settings. |
+| Lockblock: Import synced keyring | Replaces this device's local keyring with the synced wrapped keyring from plugin settings. |
 | Lockblock: Rotate vault key | Reserved for a future migration flow that will re-encrypt blocks with a new vault key. |
 | Lockblock: Forget session keys | Immediately removes decrypted session key material from memory. |
 
