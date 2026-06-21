@@ -26,14 +26,32 @@ export class LockblockKeyring {
     }
 
     try {
-      const parsed = JSON.parse(raw) as Keyring;
-      if (parsed.version !== 1 || !parsed.activeKid || !parsed.passwordWrapped || !parsed.recoveryWrapped) {
-        return null;
-      }
-      return parsed;
+      const parsed: unknown = JSON.parse(raw);
+      return LockblockKeyring.isKeyring(parsed) ? parsed : null;
     } catch {
       return null;
     }
+  }
+
+  getKeyring(): Keyring | null {
+    return this.load();
+  }
+
+  importKeyring(keyring: Keyring): void {
+    this.save(keyring);
+  }
+
+  static isKeyring(value: unknown): value is Keyring {
+    if (!isRecord(value)) {
+      return false;
+    }
+
+    return value.version === 1
+      && typeof value.activeKid === "string"
+      && isWrappedKeyRecord(value.passwordWrapped)
+      && isWrappedKeyRecord(value.recoveryWrapped)
+      && typeof value.createdAt === "string"
+      && typeof value.updatedAt === "string";
   }
 
   setup(password: string, iterations: number): Promise<{ keyring: Keyring; recoveryKey: string }> {
@@ -124,3 +142,18 @@ export class LockblockKeyring {
   }
 }
 
+function isWrappedKeyRecord(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value.kid === "string"
+    && typeof value.iterations === "number"
+    && typeof value.salt === "string"
+    && typeof value.iv === "string"
+    && typeof value.wrappedKey === "string";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}

@@ -66,3 +66,8 @@
 .lockblock-notice-button {
   margin-left: 10px;
 }
+
+.lockblock-setting-actions .setting-item-control {
+  flex-wrap: wrap;
+  gap: 8px;
+}
