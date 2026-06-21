@@ -100,7 +100,9 @@ async function deriveWrappingKey(secret: string, salt: Uint8Array, iterations: n
 }
 
 function toBufferSource(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
 }
 
 function bytesToHex(bytes: Uint8Array): string {

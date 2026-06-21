@@ -37,6 +37,7 @@ export default class LockblockPlugin extends Plugin {
     const loadedData: unknown = await this.loadData();
     this.settings = normalizeSettings(isSettingsObject(loadedData) ? loadedData : null);
     this.keyring = new LockblockKeyring(this.app.secretStorage);
+    await this.syncKeyringState();
 
     this.addSettingTab(new LockblockSettingTab(this.app, this));
     this.registerMarkdownPostProcessor((el, ctx) => this.renderReadingLockblockBlocks(el, ctx));
@@ -57,6 +58,39 @@ export default class LockblockPlugin extends Plugin {
     this.settings = normalizeSettings(this.settings);
     await this.saveData(this.settings);
     this.scheduleSessionLock();
+  }
+
+  async runSyncKeyringToSettings(): Promise<void> {
+    if (await this.syncKeyringToSettings()) {
+      new Notice("Lockblock keyring synced to plugin settings.");
+    } else {
+      new Notice("Set up lockblock before syncing the keyring.");
+    }
+  }
+
+  async runImportSyncedKeyring(): Promise<void> {
+    const synced = this.settings.syncedKeyring;
+    if (!synced) {
+      new Notice("No synced lockblock keyring found in plugin settings.");
+      return;
+    }
+
+    const local = this.keyring.getKeyring();
+    if (local) {
+      const confirmed = await confirmAction(
+        this.app,
+        "Import synced keyring?",
+        "This replaces the local Lockblock keyring on this device with the synced wrapped keyring from plugin settings.",
+        "Import keyring",
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    this.keyring.importKeyring(synced);
+    this.forgetSessionKeys();
+    new Notice("Synced lockblock keyring imported on this device.");
   }
 
   isVaultUnlocked(): boolean {
@@ -105,6 +139,26 @@ export default class LockblockPlugin extends Plugin {
       console.error("Lockblock edit protection could not be enabled.", error);
       new Notice("Lockblock loaded, but edit protection could not be enabled.");
     }
+  }
+
+  private async syncKeyringState(): Promise<void> {
+    const local = this.keyring.getKeyring();
+    const synced = this.settings.syncedKeyring;
+
+    if (synced && !local) {
+      this.keyring.importKeyring(synced);
+    }
+  }
+
+  private async syncKeyringToSettings(): Promise<boolean> {
+    const keyring = this.keyring.getKeyring();
+    if (!keyring) {
+      return false;
+    }
+
+    this.settings.syncedKeyring = keyring;
+    await this.saveSettings();
+    return true;
   }
 
   private registerCommands(): void {
@@ -175,6 +229,18 @@ export default class LockblockPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "sync-keyring-to-plugin-settings",
+      name: "Sync keyring to plugin settings",
+      callback: () => this.runSyncKeyringToSettings(),
+    });
+
+    this.addCommand({
+      id: "import-synced-keyring",
+      name: "Import synced keyring",
+      callback: () => this.runImportSyncedKeyring(),
+    });
+
+    this.addCommand({
       id: "rotate-vault-key",
       name: "Rotate vault key",
       callback: () => this.runRotateVaultKey(),
@@ -200,6 +266,7 @@ export default class LockblockPlugin extends Plugin {
 
     try {
       const { recoveryKey } = await this.keyring.setup(result.password, this.settings.kdfIterations);
+      await this.syncKeyringToSettings();
       await showRecoveryKey(this.app, recoveryKey);
       this.scheduleSessionLock();
       new Notice("Lockblock is set up and unlocked.");
@@ -209,6 +276,8 @@ export default class LockblockPlugin extends Plugin {
   }
 
   async runUnlock(): Promise<boolean> {
+    await this.syncKeyringState();
+
     if (!this.keyring.hasKeyring()) {
       new Notice("Run lockblock: Setup first.");
       return false;
@@ -500,6 +569,7 @@ export default class LockblockPlugin extends Plugin {
 
     try {
       await this.keyring.changePassword(result.currentPassword, result.nextPassword, this.settings.kdfIterations);
+      await this.syncKeyringToSettings();
       this.scheduleSessionLock();
       this.refreshRenderedCards();
       new Notice("Unlock password changed.");
@@ -516,6 +586,7 @@ export default class LockblockPlugin extends Plugin {
 
     try {
       const recoveryKey = await this.keyring.showRecoveryKey(result.password, this.settings.kdfIterations);
+      await this.syncKeyringToSettings();
       await showRecoveryKey(this.app, recoveryKey);
     } catch {
       new Notice("Could not show recovery key. Check the password and try again.");
@@ -530,6 +601,7 @@ export default class LockblockPlugin extends Plugin {
 
     try {
       await this.keyring.restore(result.recoveryKey, result.nextPassword, this.settings.kdfIterations);
+      await this.syncKeyringToSettings();
       this.scheduleSessionLock();
       this.refreshRenderedCards();
       new Notice("Lockblock restored and unlocked.");
