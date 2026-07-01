@@ -19,11 +19,15 @@ type RevealedEntry = {
   timeout: number | null;
 };
 
+export type VaultLockState = "locked" | "unlocked" | "not-setup";
+export type LockStateChangeCallback = (state: VaultLockState) => void;
+
 export default class LockblockPlugin extends Plugin {
   settings: LockblockSettings;
   private keyring: LockblockKeyring;
   private revealed = new Map<string, RevealedEntry>();
   private renderCallbacks = new Set<() => void>();
+  private lockStateCallbacks = new Set<LockStateChangeCallback>();
   private backgroundLockTimer: number | null = null;
   private sessionLockTimer: number | null = null;
   private markdownRefreshTimer: number | null = null;
@@ -38,6 +42,7 @@ export default class LockblockPlugin extends Plugin {
     this.settings = normalizeSettings(isSettingsObject(loadedData) ? loadedData : null);
     this.keyring = new LockblockKeyring(this.app.secretStorage);
     await this.syncKeyringState();
+    this.notifyLockStateChanged("not-setup");
 
     this.addSettingTab(new LockblockSettingTab(this.app, this));
     this.registerMarkdownPostProcessor((el, ctx) => this.renderReadingLockblockBlocks(el, ctx));
@@ -88,13 +93,33 @@ export default class LockblockPlugin extends Plugin {
       }
     }
 
+    const previousState = this.getVaultLockState();
     this.keyring.importKeyring(synced);
-    this.forgetSessionKeys();
+    this.forgetSessionKeys(previousState);
     new Notice("Synced lockblock keyring imported on this device.");
   }
 
   isVaultUnlocked(): boolean {
+    return this.isUnlocked();
+  }
+
+  isUnlocked(): boolean {
     return this.keyring.session !== null;
+  }
+
+  getVaultLockState(): VaultLockState {
+    if (!this.keyring.hasKeyring()) {
+      return "not-setup";
+    }
+
+    return this.isUnlocked() ? "unlocked" : "locked";
+  }
+
+  onLockStateChange(callback: LockStateChangeCallback): () => void {
+    this.lockStateCallbacks.add(callback);
+    return () => {
+      this.lockStateCallbacks.delete(callback);
+    };
   }
 
   notifyLockedEditBlocked(): void {
@@ -171,13 +196,27 @@ export default class LockblockPlugin extends Plugin {
     this.addCommand({
       id: "unlock",
       name: "Unlock",
-      callback: () => this.runUnlock(),
+      checkCallback: (checking) => {
+        const canUnlock = this.getVaultLockState() === "locked";
+        if (canUnlock && !checking) {
+          void this.runUnlock();
+        }
+
+        return canUnlock;
+      },
     });
 
     this.addCommand({
       id: "lock",
       name: "Lock",
-      callback: () => void this.runLock(),
+      checkCallback: (checking) => {
+        const canLock = this.isUnlocked();
+        if (canLock && !checking) {
+          void this.runLock();
+        }
+
+        return canLock;
+      },
     });
 
     this.addCommand({
@@ -265,10 +304,12 @@ export default class LockblockPlugin extends Plugin {
     }
 
     try {
+      const previousState = this.getVaultLockState();
       const { recoveryKey } = await this.keyring.setup(result.password, this.settings.kdfIterations);
       await this.syncKeyringToSettings();
-      await showRecoveryKey(this.app, recoveryKey);
       this.scheduleSessionLock();
+      this.notifyLockStateChanged(previousState);
+      await showRecoveryKey(this.app, recoveryKey);
       new Notice("Lockblock is set up and unlocked.");
     } catch (error) {
       new Notice(`Setup failed: ${messageFromError(error)}`);
@@ -289,10 +330,12 @@ export default class LockblockPlugin extends Plugin {
     }
 
     try {
+      const previousState = this.getVaultLockState();
       await this.keyring.unlock(result.password);
       this.scheduleSessionLock();
       await this.decryptActiveEditorForEditing();
       this.refreshRenderedCards();
+      this.notifyLockStateChanged(previousState);
       new Notice("Lockblock unlocked.");
       return true;
     } catch {
@@ -373,11 +416,12 @@ export default class LockblockPlugin extends Plugin {
     new Notice("Vault-key rotation is reserved for a future migration flow.");
   }
 
-  private forgetSessionKeys(): void {
+  private forgetSessionKeys(previousState = this.getVaultLockState()): void {
     this.cancelSessionLock();
     this.keyring.lock();
     this.hideRevealedBlocks(false);
     this.refreshRenderedCards();
+    this.notifyLockStateChanged(previousState);
   }
 
   private async ensureUnlocked(): Promise<boolean> {
@@ -568,10 +612,12 @@ export default class LockblockPlugin extends Plugin {
     }
 
     try {
+      const previousState = this.getVaultLockState();
       await this.keyring.changePassword(result.currentPassword, result.nextPassword, this.settings.kdfIterations);
       await this.syncKeyringToSettings();
       this.scheduleSessionLock();
       this.refreshRenderedCards();
+      this.notifyLockStateChanged(previousState);
       new Notice("Unlock password changed.");
     } catch {
       new Notice("Password change failed. Check the current password and try again.");
@@ -600,10 +646,12 @@ export default class LockblockPlugin extends Plugin {
     }
 
     try {
+      const previousState = this.getVaultLockState();
       await this.keyring.restore(result.recoveryKey, result.nextPassword, this.settings.kdfIterations);
       await this.syncKeyringToSettings();
       this.scheduleSessionLock();
       this.refreshRenderedCards();
+      this.notifyLockStateChanged(previousState);
       new Notice("Lockblock restored and unlocked.");
     } catch {
       new Notice("Restore failed. Check the recovery key and try again.");
@@ -821,6 +869,21 @@ export default class LockblockPlugin extends Plugin {
       refresh();
     }
     this.app.workspace.updateOptions();
+  }
+
+  private notifyLockStateChanged(previousState: VaultLockState): void {
+    const state = this.getVaultLockState();
+    if (state === previousState) {
+      return;
+    }
+
+    for (const callback of Array.from(this.lockStateCallbacks)) {
+      try {
+        callback(state);
+      } catch (error) {
+        console.error("Lockblock lock-state callback failed.", error);
+      }
+    }
   }
 
   private hideReveal(key: string): void {
