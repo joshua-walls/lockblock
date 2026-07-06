@@ -1,7 +1,7 @@
 {
   "id": "lockblock",
   "name": "Lockblock",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "minAppVersion": "1.11.4",
   "description": "Keep sensitive note sections encrypted until you choose to reveal them.",
   "author": "Joshua Walls",

@@ -2,8 +2,10 @@ import {
   Editor,
   MarkdownView,
   MarkdownPostProcessorContext,
+  Menu,
   Notice,
   Plugin,
+  setIcon,
   TFile,
 } from "obsidian";
 import { LOCKBLOCK_BLOCK_LANGUAGE } from "./constants";
@@ -19,6 +21,8 @@ type RevealedEntry = {
   timeout: number | null;
 };
 
+type StatusBarState = VaultLockState | "locking";
+
 export type VaultLockState = "locked" | "unlocked" | "not-setup";
 export type LockStateChangeCallback = (state: VaultLockState) => void;
 
@@ -31,6 +35,10 @@ export default class LockblockPlugin extends Plugin {
   private backgroundLockTimer: number | null = null;
   private sessionLockTimer: number | null = null;
   private markdownRefreshTimer: number | null = null;
+  private statusBarItem: HTMLElement | null = null;
+  private statusBarLabel: HTMLElement | null = null;
+  private statusBarIcon: HTMLElement | null = null;
+  private statusBarTimer: number | null = null;
   private renderedFileEncrypting = new Set<string>();
   private modeWatchInFlight = false;
   private lastActiveModeKey: string | null = null;
@@ -48,6 +56,8 @@ export default class LockblockPlugin extends Plugin {
     this.registerMarkdownPostProcessor((el, ctx) => this.renderReadingLockblockBlocks(el, ctx));
     await this.registerEditProtection();
     this.registerCommands();
+    this.registerContextMenus();
+    this.registerStatusBar();
     this.registerMarkdownRefresh();
     this.registerViewAutomation();
     this.registerBackgroundLock();
@@ -292,6 +302,52 @@ export default class LockblockPlugin extends Plugin {
     });
   }
 
+  private registerContextMenus(): void {
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor) => {
+        this.addEditorContextMenuItems(menu, editor);
+      }),
+    );
+  }
+
+  private addEditorContextMenuItems(menu: Menu, editor: Editor): void {
+    const block = this.currentEncryptedBlock(editor, editor.getValue());
+    if (!block) {
+      return;
+    }
+
+    menu.addSeparator();
+    if (block.header) {
+      const unlocked = this.isUnlocked();
+      menu.addItem((item) => {
+        item
+          .setTitle(unlocked ? "Reveal lockblock" : "Unlock and reveal lockblock")
+          .setIcon(unlocked ? "eye" : "unlock")
+          .onClick(() => void this.revealSelectedBlock(editor));
+      });
+      menu.addItem((item) => {
+        item
+          .setTitle(unlocked ? "Copy lockblock plaintext" : "Unlock and copy lockblock plaintext")
+          .setIcon("copy")
+          .onClick(() => void this.copySelectedBlock(editor));
+      });
+      menu.addItem((item) => {
+        item
+          .setTitle(unlocked ? "Decrypt lockblock to raw plaintext" : "Unlock and decrypt lockblock to raw plaintext")
+          .setIcon("file-text")
+          .onClick(() => void this.decryptSelectedBlockToRaw(editor));
+      });
+      return;
+    }
+
+    menu.addItem((item) => {
+      item
+        .setTitle(this.isUnlocked() ? "Encrypt lockblock" : "Unlock and encrypt lockblock")
+        .setIcon("lock")
+        .onClick(() => void this.encryptSelectedPlaintextBlock(editor, true));
+    });
+  }
+
   async runSetup(): Promise<void> {
     if (this.keyring.hasKeyring()) {
       new Notice("Lockblock is already set up.");
@@ -416,6 +472,102 @@ export default class LockblockPlugin extends Plugin {
     new Notice("Vault-key rotation is reserved for a future migration flow.");
   }
 
+  private registerStatusBar(): void {
+    const item = this.addStatusBarItem();
+    item.addClass("lockblock-status");
+    item.setAttr("role", "button");
+    item.setAttr("tabindex", "0");
+    item.setAttr("aria-label", "Lockblock status");
+
+    const icon = item.createSpan({ cls: "lockblock-status-icon" });
+    const label = item.createSpan({ cls: "lockblock-status-label" });
+    this.statusBarItem = item;
+    this.statusBarIcon = icon;
+    this.statusBarLabel = label;
+
+    this.registerDomEvent(item, "click", () => {
+      void this.runStatusBarAction();
+    });
+    this.registerDomEvent(item, "keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+
+      event.preventDefault();
+      void this.runStatusBarAction();
+    });
+
+    const unsubscribe = this.onLockStateChange(() => this.updateStatusBar());
+    this.register(unsubscribe);
+    this.statusBarTimer = window.setInterval(() => this.updateStatusBar(), 30_000);
+    this.registerInterval(this.statusBarTimer);
+    this.updateStatusBar();
+  }
+
+  private async runStatusBarAction(): Promise<void> {
+    const state = this.getVaultLockState();
+    if (state === "not-setup") {
+      await this.runSetup();
+    } else if (state === "locked") {
+      await this.runUnlock();
+    } else {
+      await this.runLock();
+    }
+  }
+
+  private updateStatusBar(): void {
+    if (!this.statusBarItem || !this.statusBarLabel || !this.statusBarIcon) {
+      return;
+    }
+
+    const displayState: StatusBarState = this.backgroundLockTimer !== null && this.isUnlocked() ? "locking" : this.getVaultLockState();
+    const label = this.statusBarLabelFor(displayState);
+    const icon = this.statusBarIconFor(displayState);
+    this.statusBarLabel.setText(label);
+    this.statusBarItem.setAttr("aria-label", `Lockblock: ${label}`);
+    this.statusBarItem.setAttr("title", this.statusBarTitleFor(displayState));
+    this.statusBarItem.toggleClass("lockblock-status-unlocked", displayState === "unlocked");
+    this.statusBarItem.toggleClass("lockblock-status-locked", displayState === "locked");
+    this.statusBarItem.toggleClass("lockblock-status-setup", displayState === "not-setup");
+    this.statusBarItem.toggleClass("lockblock-status-locking", displayState === "locking");
+
+    this.statusBarIcon.empty();
+    setIcon(this.statusBarIcon, icon);
+  }
+
+  private statusBarLabelFor(state: StatusBarState): string {
+    if (state === "not-setup") {
+      return "Lockblock setup";
+    }
+    if (state === "locking") {
+      return "Locking soon";
+    }
+
+    return state === "unlocked" ? "Lockblock unlocked" : "Lockblock locked";
+  }
+
+  private statusBarTitleFor(state: StatusBarState): string {
+    if (state === "not-setup") {
+      return "Set up Lockblock";
+    }
+    if (state === "locked") {
+      return "Unlock Lockblock";
+    }
+
+    return "Lock Lockblock";
+  }
+
+  private statusBarIconFor(state: StatusBarState): string {
+    if (state === "not-setup") {
+      return "shield-alert";
+    }
+    if (state === "unlocked") {
+      return "unlock";
+    }
+
+    return "lock";
+  }
+
   private forgetSessionKeys(previousState = this.getVaultLockState()): void {
     this.cancelSessionLock();
     this.keyring.lock();
@@ -430,6 +582,48 @@ export default class LockblockPlugin extends Plugin {
     }
 
     return this.runUnlock();
+  }
+
+  private async encryptSelectedPlaintextBlock(editor: Editor, showNotice: boolean): Promise<boolean> {
+    if (this.encrypting || !(await this.ensureUnlocked()) || !this.keyring.session) {
+      return false;
+    }
+
+    const markdown = editor.getValue();
+    const block = this.currentEncryptedBlock(editor, markdown);
+    if (!block) {
+      if (showNotice) {
+        new Notice("Select a lockblock block first.");
+      }
+      return false;
+    }
+    if (block.header) {
+      if (showNotice) {
+        new Notice("Selected lockblock is already encrypted.");
+      }
+      return false;
+    }
+    if (block.body.trim().length === 0) {
+      if (showNotice) {
+        new Notice("Selected lockblock is empty.");
+      }
+      return false;
+    }
+
+    this.encrypting = true;
+    try {
+      const sealed = await encryptBlock(block.body, this.keyring.session.vaultKey, this.keyring.session.kid);
+      editor.replaceRange(formatSealedBlock(block, serializeSealedHeader(sealed)), editor.offsetToPos(block.from), editor.offsetToPos(block.to));
+      if (showNotice) {
+        new Notice("Encrypted selected lockblock.");
+      }
+      return true;
+    } catch (error) {
+      new Notice(`Encryption failed: ${messageFromError(error)}`);
+      return false;
+    } finally {
+      this.encrypting = false;
+    }
   }
 
   private async encryptPlaintextBlocksInEditor(editor: Editor, showNotice: boolean): Promise<number> {
@@ -736,27 +930,27 @@ export default class LockblockPlugin extends Plugin {
 
       const actions = card.createDiv({ cls: "lockblock-actions" });
       if (revealed) {
-        actions.createEl("button", { text: "Hide", cls: "lockblock-small-button" }).addEventListener("click", (event) => {
+        createIconButton(actions, "Hide", "eye-off").addEventListener("click", (event) => {
           event.stopPropagation();
           this.hideReveal(key);
           render();
         });
       } else {
-        actions.createEl("button", { text: sessionUnlocked ? "Show" : "Unlock", cls: "lockblock-small-button" }).addEventListener("click", (event) => {
+        createIconButton(actions, sessionUnlocked ? "Show" : "Unlock", sessionUnlocked ? "eye" : "unlock").addEventListener("click", (event) => {
           event.stopPropagation();
           void this.revealPreviewBlock(header, key, render);
         });
       }
 
       if (this.settings.copyWithoutReveal || revealed) {
-        actions.createEl("button", { text: "Copy", cls: "lockblock-small-button" }).addEventListener("click", (event) => {
+        createIconButton(actions, "Copy", "copy").addEventListener("click", (event) => {
           event.stopPropagation();
           void this.copyPreviewBlock(header, revealed?.plaintext ?? null);
         });
       }
 
       if (sessionUnlocked) {
-        actions.createEl("button", { text: "Lock", cls: "lockblock-small-button" }).addEventListener("click", (event) => {
+        createIconButton(actions, "Lock", "lock").addEventListener("click", (event) => {
           event.stopPropagation();
           void this.runLock();
         });
@@ -1002,16 +1196,19 @@ export default class LockblockPlugin extends Plugin {
     this.backgroundLockTimer = window.setTimeout(
       () => {
         this.backgroundLockTimer = null;
+        this.updateStatusBar();
         void this.lockAfterBackgroundTimeout();
       },
       this.settings.lockOnBackgroundMinutes * 60 * 1000,
     );
+    this.updateStatusBar();
   }
 
   private cancelBackgroundLock(): void {
     if (this.backgroundLockTimer !== null) {
       window.clearTimeout(this.backgroundLockTimer);
       this.backgroundLockTimer = null;
+      this.updateStatusBar();
     }
   }
 
@@ -1024,6 +1221,7 @@ export default class LockblockPlugin extends Plugin {
     this.sessionLockTimer = window.setTimeout(
       () => {
         this.sessionLockTimer = null;
+        this.updateStatusBar();
         void this.lockAfterSessionTimeout();
       },
       this.settings.sessionLockMinutes * 60 * 1000,
@@ -1054,6 +1252,10 @@ export default class LockblockPlugin extends Plugin {
       window.clearTimeout(this.markdownRefreshTimer);
       this.markdownRefreshTimer = null;
     }
+    if (this.statusBarTimer !== null) {
+      window.clearInterval(this.statusBarTimer);
+      this.statusBarTimer = null;
+    }
     this.cancelBackgroundLock();
     this.cancelSessionLock();
   }
@@ -1062,6 +1264,15 @@ export default class LockblockPlugin extends Plugin {
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     return view?.editor ?? null;
   }
+}
+
+function createIconButton(parent: HTMLElement, label: string, icon: string): HTMLButtonElement {
+  const button = parent.createEl("button", { cls: "lockblock-small-button" });
+  const iconEl = button.createSpan({ cls: "lockblock-button-icon" });
+  setIcon(iconEl, icon);
+  button.createSpan({ text: label });
+  button.setAttr("aria-label", label);
+  return button;
 }
 
 function messageFromError(error: unknown): string {

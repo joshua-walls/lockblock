@@ -1,3 +1,16 @@
+# 0.3.9
+
+## Changed
+
+- Added a desktop status bar item that shows Lockblock setup, lock, unlock, and background-lock state with a click action.
+- Added editor context menu actions for selected `lockblock` fences: reveal, copy plaintext, encrypt, and decrypt to raw plaintext.
+- Added Obsidian/Lucide icons to status, context menu, and reading-view card actions.
+- Polished settings sections and descriptions while keeping the Obsidian 1.11.4-compatible imperative settings API.
+
+## Compatibility
+
+- Requires Obsidian `1.11.4` or newer.
+
 # 0.3.8
 
 ## Changed
