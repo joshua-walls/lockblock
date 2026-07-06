@@ -21,11 +21,11 @@ export class LockblockSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    new Setting(containerEl).setName("Encryption").setHeading();
+    new Setting(containerEl).setName("Reveal behavior").setHeading();
 
     new Setting(containerEl)
       .setName("Encrypt when entering reading view")
-      .setDesc("Seal plaintext lockblock blocks before showing the note in reading view.")
+      .setDesc("Seal plaintext lockblock blocks before rendering a note.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.autoEncryptOnReadingView).onChange(async (value) => {
           this.plugin.settings.autoEncryptOnReadingView = value;
@@ -35,7 +35,7 @@ export class LockblockSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Auto-hide revealed plaintext")
-      .setDesc("Seconds before revealed preview cards hide themselves. Use 0 to keep them visible until hidden manually.")
+      .setDesc("Hide revealed reading-view cards after this many seconds. Use 0 to keep them visible.")
       .addSlider((slider) => {
         const format = formatSeconds;
         const valueEl = createSliderValue(containerEl, slider.sliderEl.parentElement, format(this.plugin.settings.autoHideRevealedSeconds));
@@ -54,8 +54,8 @@ export class LockblockSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Copy without reveal action")
-      .setDesc("Show a copy action on locked cards without revealing plaintext on screen.")
+      .setName("Copy without reveal")
+      .setDesc("Show a copy action on locked cards without displaying plaintext.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.copyWithoutReveal).onChange(async (value) => {
           this.plugin.settings.copyWithoutReveal = value;
@@ -65,7 +65,7 @@ export class LockblockSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Require confirmation before decrypt-to-raw")
-      .setDesc("Ask before replacing sealed ciphertext with plaintext in a note.")
+      .setDesc("Ask before replacing ciphertext with plaintext in a note.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.confirmDecryptToRaw).onChange(async (value) => {
           this.plugin.settings.confirmDecryptToRaw = value;
@@ -73,9 +73,11 @@ export class LockblockSettingTab extends PluginSettingTab {
         }),
       );
 
+    new Setting(containerEl).setName("Session").setHeading();
+
     new Setting(containerEl)
-      .setName("Lock on app hidden/background")
-      .setDesc("Minutes after Obsidian is hidden before lockblock forgets the in-memory vault key. Use 0 to lock immediately.")
+      .setName("Lock after Obsidian is hidden")
+      .setDesc("Minutes before lockblock forgets the in-memory vault key. Use 0 to lock immediately.")
       .addSlider((slider) => {
         const format = formatMinutes;
         const valueEl = createSliderValue(containerEl, slider.sliderEl.parentElement, format(this.plugin.settings.lockOnBackgroundMinutes));
@@ -95,7 +97,7 @@ export class LockblockSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Unlocked session timeout")
-      .setDesc("Minutes before lockblock forgets the in-memory vault key after unlock. Use 0 to keep it unlocked until lock, forget, or background lock.")
+      .setDesc("Minutes after unlock before lockblock forgets the in-memory vault key. Use 0 to disable.")
       .addSlider((slider) => {
         const format = formatOptionalMinutes;
         const valueEl = createSliderValue(containerEl, slider.sliderEl.parentElement, format(this.plugin.settings.sessionLockMinutes));
@@ -113,26 +115,10 @@ export class LockblockSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(containerEl)
-      .setName("Password wrapping iterations")
-      .setDesc("Advanced password wrapping cost. Higher values are slower and harder to brute-force.")
-      .addText((text) => {
-        text.inputEl.type = "number";
-        text
-          .setValue(String(this.plugin.settings.kdfIterations))
-          .onChange(async (value) => {
-            const parsed = Number(value);
-            if (Number.isFinite(parsed)) {
-              this.plugin.settings.kdfIterations = Math.round(parsed);
-              await this.plugin.saveSettings();
-            }
-          });
-      });
-
-    new Setting(containerEl).setName("Commands").setHeading();
+    new Setting(containerEl).setName("Actions").setHeading();
 
     const sessionActions = new Setting(containerEl)
-      .setName("Setup and session")
+      .setName("Vault")
       .addButton((button) => button.setButtonText("Setup").onClick(() => void this.plugin.runSetup()))
       .addButton((button) => button.setButtonText("Unlock").onClick(() => void this.plugin.runUnlock()))
       .addButton((button) => button.setButtonText("Lock").onClick(() => this.plugin.runLock()))
@@ -157,14 +143,36 @@ export class LockblockSettingTab extends PluginSettingTab {
       .addButton((button) => button.setButtonText("Restore recovery").onClick(() => void this.plugin.runRestoreFromRecovery()));
     recoveryActions.settingEl.addClass("lockblock-setting-actions");
 
+    new Setting(containerEl).setName("Device sync").setHeading();
+
     const syncActions = new Setting(containerEl)
-      .setName("Device sync")
+      .setName("Synced keyring")
+      .setDesc("Use this when setting up lockblock on another synced device.")
       .addButton((button) => button.setButtonText("Sync keyring").onClick(() => void this.plugin.runSyncKeyringToSettings()))
       .addButton((button) => button.setButtonText("Import synced keyring").onClick(() => void this.plugin.runImportSyncedKeyring()));
     syncActions.settingEl.addClass("lockblock-setting-actions");
 
+    new Setting(containerEl).setName("Advanced").setHeading();
+
+    new Setting(containerEl)
+      .setName("Password wrapping iterations")
+      .setDesc("Higher values slow unlocks and make brute-force attacks harder.")
+      .addText((text) => {
+        text.inputEl.type = "number";
+        text
+          .setValue(String(this.plugin.settings.kdfIterations))
+          .onChange(async (value) => {
+            const parsed = Number(value);
+            if (Number.isFinite(parsed)) {
+              this.plugin.settings.kdfIterations = Math.round(parsed);
+              await this.plugin.saveSettings();
+            }
+          });
+      });
+
     const rotationActions = new Setting(containerEl)
       .setName("Rotation")
+      .setDesc("Reserved for a future migration flow.")
       .addButton((button) => button.setButtonText("Rotate vault key").onClick(() => this.plugin.runRotateVaultKey()));
     rotationActions.settingEl.addClass("lockblock-setting-actions");
   }

@@ -33,8 +33,17 @@
 }
 
 .lockblock-small-button {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
   font-size: var(--font-ui-smaller);
   padding: 2px 8px;
+}
+
+.lockblock-button-icon {
+  align-items: center;
+  display: inline-flex;
+  --icon-size: var(--icon-size-xs);
 }
 
 .lockblock-revealed,
@@ -70,4 +79,34 @@
 .lockblock-setting-actions .setting-item-control {
   flex-wrap: wrap;
   gap: 8px;
+}
+
+
+.lockblock-status {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 4px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.lockblock-status:hover,
+.lockblock-status:focus-visible {
+  color: var(--text-normal);
+}
+
+.lockblock-status-icon {
+  align-items: center;
+  display: inline-flex;
+  --icon-size: var(--icon-size-xs);
+}
+
+.lockblock-status-unlocked {
+  color: var(--text-success);
+}
+
+.lockblock-status-setup,
+.lockblock-status-locking {
+  color: var(--text-warning);
 }
