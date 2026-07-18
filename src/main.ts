@@ -147,12 +147,12 @@ export default class LockblockPlugin extends Plugin {
     }
 
     this.lastLockedEditNoticeAt = now;
-    const fragment = activeDocument.createDocumentFragment();
-    const text = activeDocument.createElement("span");
+    const fragment = createFragment();
+    const text = createSpan();
     text.textContent = message;
     fragment.append(text);
 
-    const button = activeDocument.createElement("button");
+    const button = createEl("button");
     button.type = "button";
     button.textContent = "Unlock";
     button.addClass("lockblock-notice-button");
@@ -233,6 +233,12 @@ export default class LockblockPlugin extends Plugin {
       id: "encrypt-plaintext-blocks-current-note",
       name: "Encrypt plaintext blocks in current note",
       editorCallback: (editor) => this.encryptPlaintextBlocksInEditor(editor, true),
+    });
+
+    this.addCommand({
+      id: "insert-empty-block",
+      name: "Insert empty block",
+      editorCallback: (editor) => this.insertLockblockBlock(editor),
     });
 
     this.addCommand({
@@ -456,6 +462,16 @@ export default class LockblockPlugin extends Plugin {
     this.hideRevealedBlocks();
   }
 
+  runInsertLockblockBlock(): void {
+    const editor = this.activeMarkdownEditor();
+    if (!editor) {
+      new Notice("Open a Markdown note first.");
+      return;
+    }
+
+    this.insertLockblockBlock(editor);
+  }
+
   async runChangePassword(): Promise<void> {
     await this.changePassword();
   }
@@ -582,6 +598,21 @@ export default class LockblockPlugin extends Plugin {
     }
 
     return this.runUnlock();
+  }
+
+  private insertLockblockBlock(editor: Editor): void {
+    const insertAt = editor.getCursor("to");
+    const currentLine = editor.getLine(insertAt.line);
+    const blankLine = currentLine.trim().length === 0;
+    const from = blankLine ? { line: insertAt.line, ch: 0 } : insertAt;
+    const to = blankLine ? { line: insertAt.line, ch: currentLine.length } : insertAt;
+    const needsLeadingNewline = !blankLine && insertAt.ch > 0;
+    const needsTrailingNewline = !blankLine && insertAt.ch < currentLine.length;
+    const insertion = `${needsLeadingNewline ? "\n" : ""}\`\`\`${LOCKBLOCK_BLOCK_LANGUAGE}\n\n\`\`\`${needsTrailingNewline ? "\n" : ""}`;
+
+    editor.replaceRange(insertion, from, to);
+    editor.setCursor({ line: from.line + (needsLeadingNewline ? 2 : 1), ch: 0 });
+    new Notice("Inserted empty lockblock.");
   }
 
   private async encryptSelectedPlaintextBlock(editor: Editor, showNotice: boolean): Promise<boolean> {
@@ -870,7 +901,7 @@ export default class LockblockPlugin extends Plugin {
         }
 
         pre.dataset.lockblockProcessed = "true";
-        const container = pre.ownerDocument.createElement("div");
+        const container = pre.ownerDocument.createDiv();
         pre.replaceWith(container);
         this.renderLockblockCard(codeBlock.textContent ?? "", container, ctx.sourcePath);
       }
@@ -880,6 +911,7 @@ export default class LockblockPlugin extends Plugin {
   renderLockblockCard(source: string, el: HTMLElement, sourcePath: string): void {
     const header = parseSealedHeader(source.trim());
     const key = header ? `${sourcePath}:${header.ct}` : `${sourcePath}:${source}`;
+    const trimmedSource = source.trim();
     let registered = false;
     let hasRendered = false;
 
@@ -894,17 +926,17 @@ export default class LockblockPlugin extends Plugin {
       const card = el.createDiv({ cls: "lockblock-card" });
 
       if (!header) {
-        if (!source.trim().startsWith("lockblock:v1:") && this.keyring.session) {
+        if (trimmedSource.length > 0 && !trimmedSource.startsWith("lockblock:v1:") && this.keyring.session) {
           card.createDiv({ cls: "lockblock-card-title", text: "Encrypting" });
           card.createDiv({ cls: "lockblock-card-message", text: "Sealing plaintext lockblock before reading." });
           void this.encryptRenderedPlaintextBlock(sourcePath);
           return;
         }
 
-        card.createDiv({ cls: "lockblock-card-title", text: source.trim().startsWith("lockblock:v1:") ? "Malformed encrypted block" : "Plaintext lockblock block" });
+        card.createDiv({ cls: "lockblock-card-title", text: trimmedSource.startsWith("lockblock:v1:") ? "Malformed encrypted block" : "Plaintext lockblock block" });
         card.createDiv({
           cls: "lockblock-card-message",
-          text: source.trim().startsWith("lockblock:v1:")
+          text: trimmedSource.startsWith("lockblock:v1:")
             ? "Lockblock could not read this sealed block header."
             : "This block has not been sealed yet.",
         });

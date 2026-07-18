@@ -1,3 +1,18 @@
+# 0.3.10
+
+## Added
+
+- Added an **Insert empty block** command to insert an empty `lockblock` fenced code block at the cursor.
+
+## Changed
+
+- Added dual-version settings definitions so Lockblock settings remain available on Obsidian 1.11.4 and appear in settings search on Obsidian 1.13.0 or newer.
+- Empty plaintext `lockblock` fences now stay unsealed until content is added.
+
+## Development
+
+- Updated lint validation to cover plugin source, manifest, styles, and JSON metadata with current Obsidian lint rules.
+
 # 0.3.9
 
 ## Changed

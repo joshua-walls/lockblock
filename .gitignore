@@ -13,3 +13,5 @@ coverage/
 *.gz
 *.7z
 proposals/
+
+AGENTS.md
