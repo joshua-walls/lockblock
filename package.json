@@ -1,12 +1,15 @@
 {
   "name": "lockblock",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "Keep sensitive note sections encrypted until you choose to reveal them.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
-    "lint:obsidian": "npm exec -- eslint --no-warn-ignored \"src/**/*.ts\" \"manifest.json\" \"styles.css\""
+    "lint": "eslint .",
+    "lint:obsidian": "npm run lint",
+    "typecheck": "tsc --noEmit",
+    "validate": "npm run lint && npm run typecheck && npm run build"
   },
   "keywords": [],
   "author": "Joshua Walls",
@@ -16,9 +19,10 @@
     "@eslint/js": "^10.0.1",
     "@eslint/json": "^2.0.0",
     "@types/node": "^20.0.0",
+    "@typescript-eslint/parser": "^8.64.0",
     "esbuild": "^0.25.0",
-    "eslint": "^10.4.1",
-    "eslint-plugin-obsidianmd": "^0.3.0",
+    "eslint": "^10.7.0",
+    "eslint-plugin-obsidianmd": "^0.4.1",
     "obsidian": "latest",
     "tslib": "^2.6.0",
     "typescript": "^5.4.0",

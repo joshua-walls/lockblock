@@ -8,6 +8,7 @@ Quick reference for the command palette.
 | Lockblock: Unlock | Prompts for your unlock password and keeps the decrypted vault key in memory for this session. |
 | Lockblock: Lock | Removes the decrypted vault key from memory and hides revealed blocks. |
 | Lockblock: Encrypt plaintext blocks in current note | Finds plaintext `lockblock` code blocks in the active note and replaces them with sealed Lockblock ciphertext. |
+| Lockblock: Insert empty block | Inserts an empty `lockblock` fenced code block at the cursor. |
 | Lockblock: Reveal selected block | Decrypts the selected block for viewing without changing the note. |
 | Lockblock: Copy selected block | Decrypts the selected block and copies the plaintext without needing to reveal it on screen. |
 | Lockblock: Hide revealed blocks | Hides any plaintext currently shown in Lockblock preview cards. |
@@ -22,7 +23,7 @@ Quick reference for the command palette.
 
 ## Where to start
 
-Use **Setup** first, then **Encrypt plaintext blocks in current note** after writing a plaintext `lockblock` block.
+Use **Setup** first, then **Insert empty block** to create a blank fenced block. Run **Encrypt plaintext blocks in current note** after writing sensitive content inside it.
 
 For normal reading, use preview-card buttons or **Reveal selected block** / **Copy selected block**.
 

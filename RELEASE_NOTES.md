@@ -1,10 +1,10 @@
-# Lockblock 0.3.9
+# Lockblock 0.3.10
 
-Lockblock `0.3.9` adds desktop UI polish for faster lockblock workflows.
+Lockblock `0.3.10` adds a faster way to start new encrypted sections and keeps settings compatible across Obsidian versions.
 
 ## Highlights
 
-- Added a desktop status bar item for Lockblock setup, locked, unlocked, and background-lock state.
-- Added editor context menu actions for selected `lockblock` fences.
-- Added icons to status, context menu, and reading-view card actions.
-- Polished settings layout and descriptions without raising the minimum Obsidian version.
+- Added **Lockblock: Insert empty block** to insert a blank `lockblock` fenced code block at the cursor.
+- Empty `lockblock` fences now remain unsealed until content is added.
+- Added dual-version settings support: the existing settings UI still works on Obsidian 1.11.4, and settings search works on Obsidian 1.13.0 or newer.
+- No sealed block, keyring, recovery key, or encryption format changes.
