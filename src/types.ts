@@ -4,6 +4,7 @@ export interface LockblockSettings {
   autoHideRevealedSeconds: number;
   copyWithoutReveal: boolean;
   confirmDecryptToRaw: boolean;
+  suppressNotifications: boolean;
   lockOnBackgroundMinutes: number;
   sessionLockMinutes: number;
   kdfIterations: number;

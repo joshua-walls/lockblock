@@ -1,3 +1,9 @@
+# 0.3.11
+
+## Added
+
+- Added a setting to suppress Lockblock notification popups while keeping dialogs and confirmations visible.
+
 # 0.3.10
 
 ## Added

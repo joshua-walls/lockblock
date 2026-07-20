@@ -77,16 +77,16 @@ export default class LockblockPlugin extends Plugin {
 
   async runSyncKeyringToSettings(): Promise<void> {
     if (await this.syncKeyringToSettings()) {
-      new Notice("Lockblock keyring synced to plugin settings.");
+      this.showNotice("Lockblock keyring synced to plugin settings.");
     } else {
-      new Notice("Set up lockblock before syncing the keyring.");
+      this.showNotice("Set up lockblock before syncing the keyring.");
     }
   }
 
   async runImportSyncedKeyring(): Promise<void> {
     const synced = this.settings.syncedKeyring;
     if (!synced) {
-      new Notice("No synced lockblock keyring found in plugin settings.");
+      this.showNotice("No synced lockblock keyring found in plugin settings.");
       return;
     }
 
@@ -106,7 +106,7 @@ export default class LockblockPlugin extends Plugin {
     const previousState = this.getVaultLockState();
     this.keyring.importKeyring(synced);
     this.forgetSessionKeys(previousState);
-    new Notice("Synced lockblock keyring imported on this device.");
+    this.showNotice("Synced lockblock keyring imported on this device.");
   }
 
   isVaultUnlocked(): boolean {
@@ -158,11 +158,23 @@ export default class LockblockPlugin extends Plugin {
     button.addClass("lockblock-notice-button");
     fragment.append(button);
 
-    const notice = new Notice(fragment, 8000);
+    const notice = this.showNotice(fragment, 8000);
+    if (!notice) {
+      return;
+    }
+
     button.addEventListener("click", () => {
       notice.hide();
       void this.runUnlock();
     });
+  }
+
+  private showNotice(message: string | DocumentFragment, timeout?: number): Notice | null {
+    if (this.settings.suppressNotifications) {
+      return null;
+    }
+
+    return new Notice(message, timeout);
   }
 
   private async registerEditProtection(): Promise<void> {
@@ -172,7 +184,7 @@ export default class LockblockPlugin extends Plugin {
       this.app.workspace.updateOptions();
     } catch (error) {
       console.error("Lockblock edit protection could not be enabled.", error);
-      new Notice("Lockblock loaded, but edit protection could not be enabled.");
+      this.showNotice("Lockblock loaded, but edit protection could not be enabled.");
     }
   }
 
@@ -356,7 +368,7 @@ export default class LockblockPlugin extends Plugin {
 
   async runSetup(): Promise<void> {
     if (this.keyring.hasKeyring()) {
-      new Notice("Lockblock is already set up.");
+      this.showNotice("Lockblock is already set up.");
       return;
     }
 
@@ -372,9 +384,9 @@ export default class LockblockPlugin extends Plugin {
       this.scheduleSessionLock();
       this.notifyLockStateChanged(previousState);
       await showRecoveryKey(this.app, recoveryKey);
-      new Notice("Lockblock is set up and unlocked.");
+      this.showNotice("Lockblock is set up and unlocked.");
     } catch (error) {
-      new Notice(`Setup failed: ${messageFromError(error)}`);
+      this.showNotice(`Setup failed: ${messageFromError(error)}`);
     }
   }
 
@@ -382,7 +394,7 @@ export default class LockblockPlugin extends Plugin {
     await this.syncKeyringState();
 
     if (!this.keyring.hasKeyring()) {
-      new Notice("Run lockblock: Setup first.");
+      this.showNotice("Run lockblock: Setup first.");
       return false;
     }
 
@@ -398,10 +410,10 @@ export default class LockblockPlugin extends Plugin {
       await this.decryptActiveEditorForEditing();
       this.refreshRenderedCards();
       this.notifyLockStateChanged(previousState);
-      new Notice("Lockblock unlocked.");
+      this.showNotice("Lockblock unlocked.");
       return true;
     } catch {
-      new Notice("Unlock failed. Check the password and try again.");
+      this.showNotice("Unlock failed. Check the password and try again.");
       return false;
     }
   }
@@ -409,19 +421,19 @@ export default class LockblockPlugin extends Plugin {
   async runLock(): Promise<void> {
     await this.encryptActiveEditorBeforeLock();
     this.forgetSessionKeys();
-    new Notice("Lockblock locked.");
+    this.showNotice("Lockblock locked.");
   }
 
   async runForgetSessionKeys(): Promise<void> {
     await this.encryptActiveEditorBeforeLock();
     this.forgetSessionKeys();
-    new Notice("Session keys forgotten.");
+    this.showNotice("Session keys forgotten.");
   }
 
   async runEncryptPlaintextBlocksInCurrentNote(): Promise<void> {
     const editor = this.activeMarkdownEditor();
     if (!editor) {
-      new Notice("Open a Markdown note first.");
+      this.showNotice("Open a Markdown note first.");
       return;
     }
 
@@ -431,7 +443,7 @@ export default class LockblockPlugin extends Plugin {
   async runRevealSelectedBlock(): Promise<void> {
     const editor = this.activeMarkdownEditor();
     if (!editor) {
-      new Notice("Open a Markdown note first.");
+      this.showNotice("Open a Markdown note first.");
       return;
     }
 
@@ -441,7 +453,7 @@ export default class LockblockPlugin extends Plugin {
   async runCopySelectedBlock(): Promise<void> {
     const editor = this.activeMarkdownEditor();
     if (!editor) {
-      new Notice("Open a Markdown note first.");
+      this.showNotice("Open a Markdown note first.");
       return;
     }
 
@@ -451,7 +463,7 @@ export default class LockblockPlugin extends Plugin {
   async runDecryptSelectedBlockToRaw(): Promise<void> {
     const editor = this.activeMarkdownEditor();
     if (!editor) {
-      new Notice("Open a Markdown note first.");
+      this.showNotice("Open a Markdown note first.");
       return;
     }
 
@@ -465,7 +477,7 @@ export default class LockblockPlugin extends Plugin {
   runInsertLockblockBlock(): void {
     const editor = this.activeMarkdownEditor();
     if (!editor) {
-      new Notice("Open a Markdown note first.");
+      this.showNotice("Open a Markdown note first.");
       return;
     }
 
@@ -485,7 +497,7 @@ export default class LockblockPlugin extends Plugin {
   }
 
   runRotateVaultKey(): void {
-    new Notice("Vault-key rotation is reserved for a future migration flow.");
+    this.showNotice("Vault-key rotation is reserved for a future migration flow.");
   }
 
   private registerStatusBar(): void {
@@ -612,7 +624,7 @@ export default class LockblockPlugin extends Plugin {
 
     editor.replaceRange(insertion, from, to);
     editor.setCursor({ line: from.line + (needsLeadingNewline ? 2 : 1), ch: 0 });
-    new Notice("Inserted empty lockblock.");
+    this.showNotice("Inserted empty lockblock.");
   }
 
   private async encryptSelectedPlaintextBlock(editor: Editor, showNotice: boolean): Promise<boolean> {
@@ -624,19 +636,19 @@ export default class LockblockPlugin extends Plugin {
     const block = this.currentEncryptedBlock(editor, markdown);
     if (!block) {
       if (showNotice) {
-        new Notice("Select a lockblock block first.");
+        this.showNotice("Select a lockblock block first.");
       }
       return false;
     }
     if (block.header) {
       if (showNotice) {
-        new Notice("Selected lockblock is already encrypted.");
+        this.showNotice("Selected lockblock is already encrypted.");
       }
       return false;
     }
     if (block.body.trim().length === 0) {
       if (showNotice) {
-        new Notice("Selected lockblock is empty.");
+        this.showNotice("Selected lockblock is empty.");
       }
       return false;
     }
@@ -646,11 +658,11 @@ export default class LockblockPlugin extends Plugin {
       const sealed = await encryptBlock(block.body, this.keyring.session.vaultKey, this.keyring.session.kid);
       editor.replaceRange(formatSealedBlock(block, serializeSealedHeader(sealed)), editor.offsetToPos(block.from), editor.offsetToPos(block.to));
       if (showNotice) {
-        new Notice("Encrypted selected lockblock.");
+        this.showNotice("Encrypted selected lockblock.");
       }
       return true;
     } catch (error) {
-      new Notice(`Encryption failed: ${messageFromError(error)}`);
+      this.showNotice(`Encryption failed: ${messageFromError(error)}`);
       return false;
     } finally {
       this.encrypting = false;
@@ -667,7 +679,7 @@ export default class LockblockPlugin extends Plugin {
 
     if (plaintextBlocks.length === 0) {
       if (showNotice) {
-        new Notice("No plaintext encrypted blocks found.");
+        this.showNotice("No plaintext encrypted blocks found.");
       }
       return 0;
     }
@@ -685,12 +697,12 @@ export default class LockblockPlugin extends Plugin {
       }
 
       if (showNotice) {
-        new Notice(`Encrypted ${replacements.length} block${replacements.length === 1 ? "" : "s"}.`);
+        this.showNotice(`Encrypted ${replacements.length} block${replacements.length === 1 ? "" : "s"}.`);
       }
 
       return replacements.length;
     } catch (error) {
-      new Notice(`Encryption failed: ${messageFromError(error)}`);
+      this.showNotice(`Encryption failed: ${messageFromError(error)}`);
       return 0;
     } finally {
       this.encrypting = false;
@@ -725,7 +737,7 @@ export default class LockblockPlugin extends Plugin {
         const plaintext = await decryptBlock(block.header, this.keyring.session.vaultKey);
         replacements.push({ block, replacement: formatPlaintextBlock(block, plaintext) });
       } catch {
-        new Notice("Could not decrypt a lockblock for editing.");
+        this.showNotice("Could not decrypt a lockblock for editing.");
       }
     }
 
@@ -757,18 +769,18 @@ export default class LockblockPlugin extends Plugin {
     }
 
     await navigator.clipboard.writeText(plaintext);
-    new Notice("Copied decrypted block.");
+    this.showNotice("Copied decrypted block.");
   }
 
   private async decryptSelectedBlockToRaw(editor: Editor): Promise<void> {
     const markdown = editor.getValue();
     const block = this.currentEncryptedBlock(editor, markdown);
     if (!block) {
-      new Notice("Select an encrypted block first.");
+      this.showNotice("Select an encrypted block first.");
       return;
     }
     if (!block.header) {
-      new Notice("Selected encrypted block is already plaintext.");
+      this.showNotice("Selected encrypted block is already plaintext.");
       return;
     }
 
@@ -790,14 +802,14 @@ export default class LockblockPlugin extends Plugin {
     }
 
     editor.replaceRange(formatPlaintextBlock(block, plaintext), editor.offsetToPos(block.from), editor.offsetToPos(block.to));
-    new Notice("Block decrypted to raw plaintext.");
+    this.showNotice("Block decrypted to raw plaintext.");
   }
 
   private async decryptSelectedEditorBlock(editor: Editor): Promise<string | null> {
     const markdown = editor.getValue();
     const block = this.currentEncryptedBlock(editor, markdown);
     if (!block) {
-      new Notice("Select an encrypted block first.");
+      this.showNotice("Select an encrypted block first.");
       return null;
     }
     if (!block.header) {
@@ -818,14 +830,14 @@ export default class LockblockPlugin extends Plugin {
       return null;
     }
     if (header.kid !== this.keyring.session.kid) {
-      new Notice(`This block uses key ${header.kid}, but only ${this.keyring.session.kid} is loaded.`);
+      this.showNotice(`This block uses key ${header.kid}, but only ${this.keyring.session.kid} is loaded.`);
       return null;
     }
 
     try {
       return await decryptBlock(header, this.keyring.session.vaultKey);
     } catch {
-      new Notice("Could not decrypt this block. It may be corrupt or from a different key.");
+      this.showNotice("Could not decrypt this block. It may be corrupt or from a different key.");
       return null;
     }
   }
@@ -843,9 +855,9 @@ export default class LockblockPlugin extends Plugin {
       this.scheduleSessionLock();
       this.refreshRenderedCards();
       this.notifyLockStateChanged(previousState);
-      new Notice("Unlock password changed.");
+      this.showNotice("Unlock password changed.");
     } catch {
-      new Notice("Password change failed. Check the current password and try again.");
+      this.showNotice("Password change failed. Check the current password and try again.");
     }
   }
 
@@ -860,7 +872,7 @@ export default class LockblockPlugin extends Plugin {
       await this.syncKeyringToSettings();
       await showRecoveryKey(this.app, recoveryKey);
     } catch {
-      new Notice("Could not show recovery key. Check the password and try again.");
+      this.showNotice("Could not show recovery key. Check the password and try again.");
     }
   }
 
@@ -877,9 +889,9 @@ export default class LockblockPlugin extends Plugin {
       this.scheduleSessionLock();
       this.refreshRenderedCards();
       this.notifyLockStateChanged(previousState);
-      new Notice("Lockblock restored and unlocked.");
+      this.showNotice("Lockblock restored and unlocked.");
     } catch {
-      new Notice("Restore failed. Check the recovery key and try again.");
+      this.showNotice("Restore failed. Check the recovery key and try again.");
     }
   }
 
@@ -1004,7 +1016,7 @@ export default class LockblockPlugin extends Plugin {
 
     const file = this.app.vault.getFileByPath(sourcePath);
     if (!(file instanceof TFile)) {
-      new Notice("Could not find note to seal lockblock.");
+      this.showNotice("Could not find note to seal lockblock.");
       return;
     }
 
@@ -1012,7 +1024,7 @@ export default class LockblockPlugin extends Plugin {
     try {
       await this.encryptRenderedPlaintextBlockAsync(file);
     } catch (error) {
-      new Notice(`Could not seal lockblock: ${messageFromError(error)}`);
+      this.showNotice(`Could not seal lockblock: ${messageFromError(error)}`);
     } finally {
       this.renderedFileEncrypting.delete(sourcePath);
     }
@@ -1073,7 +1085,7 @@ export default class LockblockPlugin extends Plugin {
     }
 
     await navigator.clipboard.writeText(value);
-    new Notice("Copied decrypted block.");
+    this.showNotice("Copied decrypted block.");
   }
 
   private hideRevealedBlocks(showNotice = true): void {
@@ -1086,7 +1098,7 @@ export default class LockblockPlugin extends Plugin {
     }
 
     if (showNotice) {
-      new Notice("Revealed lockblock cards hidden.");
+      this.showNotice("Revealed lockblock cards hidden.");
     }
   }
 
@@ -1263,13 +1275,13 @@ export default class LockblockPlugin extends Plugin {
   private async lockAfterBackgroundTimeout(): Promise<void> {
     await this.encryptActiveEditorBeforeLock();
     this.forgetSessionKeys();
-    new Notice("Lockblock locked after Obsidian went to the background.");
+    this.showNotice("Lockblock locked after Obsidian went to the background.");
   }
 
   private async lockAfterSessionTimeout(): Promise<void> {
     await this.encryptActiveEditorBeforeLock();
     this.forgetSessionKeys();
-    new Notice("Lockblock locked after the unlocked session timed out.");
+    this.showNotice("Lockblock locked after the unlocked session timed out.");
   }
 
   private cancelSessionLock(): void {
