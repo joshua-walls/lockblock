@@ -43,6 +43,8 @@ In reading view, sealed blocks render as Lockblock cards with actions to show, h
 
 In source or live preview editing, sealed blocks are editable only after the vault is unlocked. If the vault is locked, Lockblock blocks edits that touch sealed ciphertext and offers an unlock action.
 
+Use **Suppress notification popups** in Lockblock settings to hide Lockblock toast messages while keeping dialogs and confirmations visible.
+
 ## Syncing Devices
 
 Obsidian `secretStorage` is device-local. To use the same sealed blocks on another device, enable plugin settings sync for Lockblock. Lockblock stores a synced copy of the wrapped keyring in plugin settings and imports it into local `secretStorage` when a device does not already have a local keyring.

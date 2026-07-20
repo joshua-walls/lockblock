@@ -130,6 +130,18 @@ export class LockblockSettingTab extends PluginSettingTab {
               );
             },
           },
+          {
+            name: "Suppress notification popups",
+            desc: "Hide Lockblock toast messages. Dialogs and confirmations still appear.",
+            render: (setting) => {
+              setting.addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.suppressNotifications).onChange(async (value) => {
+                  this.plugin.settings.suppressNotifications = value;
+                  await this.plugin.saveSettings();
+                }),
+              );
+            },
+          },
         ],
       },
       {

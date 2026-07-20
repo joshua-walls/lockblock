@@ -1,10 +1,9 @@
-# Lockblock 0.3.10
+# Lockblock 0.3.11
 
-Lockblock `0.3.10` adds a faster way to start new encrypted sections and keeps settings compatible across Obsidian versions.
+Lockblock `0.3.11` adds a setting for users who prefer a quieter Lockblock experience.
 
 ## Highlights
 
-- Added **Lockblock: Insert empty block** to insert a blank `lockblock` fenced code block at the cursor.
-- Empty `lockblock` fences now remain unsealed until content is added.
-- Added dual-version settings support: the existing settings UI still works on Obsidian 1.11.4, and settings search works on Obsidian 1.13.0 or newer.
+- Added **Suppress notification popups** in Lockblock settings.
+- The setting hides Lockblock toast messages while keeping password prompts, recovery-key dialogs, plaintext viewers, and confirmation dialogs visible.
 - No sealed block, keyring, recovery key, or encryption format changes.
