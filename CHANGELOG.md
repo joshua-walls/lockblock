@@ -1,3 +1,9 @@
+# 0.3.12
+
+## Fixed
+
+- Fixed reading-view `lockblock` cards not rendering in Vault Forge by using Obsidian's fenced-code block processor instead of a DOM selector pass.
+
 # 0.3.11
 
 ## Added

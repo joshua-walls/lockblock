@@ -1,6 +1,6 @@
 {
   "name": "lockblock",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "description": "Keep sensitive note sections encrypted until you choose to reveal them.",
   "main": "main.js",
   "scripts": {
