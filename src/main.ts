@@ -1,7 +1,6 @@
 import {
   Editor,
   MarkdownView,
-  MarkdownPostProcessorContext,
   Menu,
   Notice,
   Plugin,
@@ -53,7 +52,9 @@ export default class LockblockPlugin extends Plugin {
     this.notifyLockStateChanged("not-setup");
 
     this.addSettingTab(new LockblockSettingTab(this.app, this));
-    this.registerMarkdownPostProcessor((el, ctx) => this.renderReadingLockblockBlocks(el, ctx));
+    this.registerMarkdownCodeBlockProcessor(LOCKBLOCK_BLOCK_LANGUAGE, (source, el, ctx) => {
+      this.renderLockblockCard(source, el, ctx.sourcePath);
+    });
     await this.registerEditProtection();
     this.registerCommands();
     this.registerContextMenus();
@@ -895,32 +896,7 @@ export default class LockblockPlugin extends Plugin {
     }
   }
 
-  private renderReadingLockblockBlocks(el: HTMLElement, ctx: MarkdownPostProcessorContext): void {
-    window.setTimeout(() => {
-      if (!el.isConnected || !el.closest(".markdown-preview-view") || el.closest(".markdown-source-view")) {
-        return;
-      }
-
-      const codeBlocks = Array.from(el.querySelectorAll<HTMLElement>(`pre > code.language-${LOCKBLOCK_BLOCK_LANGUAGE}`));
-      if (el.matches(`pre > code.language-${LOCKBLOCK_BLOCK_LANGUAGE}`)) {
-        codeBlocks.push(el);
-      }
-
-      for (const codeBlock of codeBlocks) {
-        const pre = codeBlock.parentElement;
-        if (!pre || pre.dataset.lockblockProcessed === "true") {
-          continue;
-        }
-
-        pre.dataset.lockblockProcessed = "true";
-        const container = pre.ownerDocument.createDiv();
-        pre.replaceWith(container);
-        this.renderLockblockCard(codeBlock.textContent ?? "", container, ctx.sourcePath);
-      }
-    }, 0);
-  }
-
-  renderLockblockCard(source: string, el: HTMLElement, sourcePath: string): void {
+  private renderLockblockCard(source: string, el: HTMLElement, sourcePath: string): void {
     const header = parseSealedHeader(source.trim());
     const key = header ? `${sourcePath}:${header.ct}` : `${sourcePath}:${source}`;
     const trimmedSource = source.trim();

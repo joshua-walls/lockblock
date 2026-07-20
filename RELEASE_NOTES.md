@@ -1,9 +1,9 @@
-# Lockblock 0.3.11
+# Lockblock 0.3.12
 
-Lockblock `0.3.11` adds a setting for users who prefer a quieter Lockblock experience.
+Lockblock `0.3.12` fixes reading-view cards for `lockblock` fenced blocks in vaults where the previous DOM scan missed rendered code blocks.
 
 ## Highlights
 
-- Added **Suppress notification popups** in Lockblock settings.
-- The setting hides Lockblock toast messages while keeping password prompts, recovery-key dialogs, plaintext viewers, and confirmation dialogs visible.
+- Fixed missing Lockblock reading-view cards and action buttons by using Obsidian's fenced-code block processor.
+- Confirmed the change does not alter block parsing, encryption, decryption, keyring storage, or sealed block format.
 - No sealed block, keyring, recovery key, or encryption format changes.
