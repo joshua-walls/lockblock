@@ -1,3 +1,11 @@
+# Lockblock 0.3.14
+
+Lockblock `0.3.14` adds the reading-view **Encrypt** action for plaintext `lockblock` blocks. When the vault is locked, the action prompts for unlock before sealing the block through the existing encryption flow.
+
+# Lockblock 0.3.13
+
+Lockblock `0.3.13` adds an **Encrypt** button to plaintext `lockblock` cards in reading view. The button unlocks the vault when needed and seals the block using the existing encryption flow.
+
 # Lockblock 0.3.12
 
 Lockblock `0.3.12` fixes reading-view cards for `lockblock` fenced blocks in vaults where the previous DOM scan missed rendered code blocks.

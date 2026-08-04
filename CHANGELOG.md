@@ -1,3 +1,15 @@
+# 0.3.14
+
+## Added
+
+- Added the reading-view **Encrypt** action for plaintext `lockblock` blocks, including unlock-then-encrypt behavior when the vault is locked.
+
+# 0.3.13
+
+## Added
+
+- Added an **Encrypt** button to plaintext `lockblock` cards in reading view.
+
 # 0.3.12
 
 ## Fixed

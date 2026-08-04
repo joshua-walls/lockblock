@@ -914,7 +914,8 @@ export default class LockblockPlugin extends Plugin {
       const card = el.createDiv({ cls: "lockblock-card" });
 
       if (!header) {
-        if (trimmedSource.length > 0 && !trimmedSource.startsWith("lockblock:v1:") && this.keyring.session) {
+        const isPlaintextBlock = trimmedSource.length > 0 && !trimmedSource.startsWith("lockblock:v1:");
+        if (isPlaintextBlock && this.keyring.session && this.settings.autoEncryptOnReadingView) {
           card.createDiv({ cls: "lockblock-card-title", text: "Encrypting" });
           card.createDiv({ cls: "lockblock-card-message", text: "Sealing plaintext lockblock before reading." });
           void this.encryptRenderedPlaintextBlock(sourcePath);
@@ -928,6 +929,13 @@ export default class LockblockPlugin extends Plugin {
             ? "Lockblock could not read this sealed block header."
             : "This block has not been sealed yet.",
         });
+        if (isPlaintextBlock) {
+          const actions = card.createDiv({ cls: "lockblock-actions" });
+          createIconButton(actions, "Encrypt", "lock").addEventListener("click", (event) => {
+            event.stopPropagation();
+            void this.encryptRenderedPlaintextBlockWithUnlock(sourcePath);
+          });
+        }
         return;
       }
 
@@ -1004,6 +1012,14 @@ export default class LockblockPlugin extends Plugin {
     } finally {
       this.renderedFileEncrypting.delete(sourcePath);
     }
+  }
+
+  private async encryptRenderedPlaintextBlockWithUnlock(sourcePath: string): Promise<void> {
+    if (!(await this.ensureUnlocked())) {
+      return;
+    }
+
+    await this.encryptRenderedPlaintextBlock(sourcePath);
   }
 
   private async encryptRenderedPlaintextBlockAsync(file: TFile): Promise<void> {
