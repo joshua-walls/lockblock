@@ -1,3 +1,13 @@
+# 0.3.15
+
+## Added
+
+- Added a **Lockblock: Encrypt selected text** command that replaces selected editor text with a sealed `lockblock` block.
+
+## Safety
+
+- The command rejects empty selections and selections that overlap existing encrypted blocks.
+
 # 0.3.14
 
 ## Added
