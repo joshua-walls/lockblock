@@ -249,6 +249,12 @@ export default class LockblockPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "encrypt-selected-text",
+      name: "Encrypt selected text",
+      editorCallback: (editor) => void this.encryptSelectedText(editor),
+    });
+
+    this.addCommand({
       id: "insert-empty-block",
       name: "Insert empty block",
       editorCallback: (editor) => this.insertLockblockBlock(editor),
@@ -665,6 +671,43 @@ export default class LockblockPlugin extends Plugin {
     } catch (error) {
       this.showNotice(`Encryption failed: ${messageFromError(error)}`);
       return false;
+    } finally {
+      this.encrypting = false;
+    }
+  }
+
+  private async encryptSelectedText(editor: Editor): Promise<void> {
+    if (this.encrypting || !(await this.ensureUnlocked()) || !this.keyring.session) {
+      return;
+    }
+
+    const from = editor.posToOffset(editor.getCursor("from"));
+    const to = editor.posToOffset(editor.getCursor("to"));
+    const selectionStart = Math.min(from, to);
+    const selectionEnd = Math.max(from, to);
+    if (selectionStart === selectionEnd) {
+      this.showNotice("Select text to encrypt first.");
+      return;
+    }
+
+    const markdown = editor.getValue();
+    const selectedBlock = findEncryptedBlocks(markdown).find(
+      (block) => block.header && selectionStart < block.to && selectionEnd > block.from,
+    );
+    if (selectedBlock) {
+      this.showNotice("Selected text is already inside an encrypted lockblock.");
+      return;
+    }
+
+    this.encrypting = true;
+    try {
+      const plaintext = markdown.slice(selectionStart, selectionEnd);
+      const sealed = await encryptBlock(plaintext, this.keyring.session.vaultKey, this.keyring.session.kid);
+      const replacement = `\`\`\`${LOCKBLOCK_BLOCK_LANGUAGE}\n${serializeSealedHeader(sealed)}\n\`\`\``;
+      editor.replaceRange(replacement, editor.offsetToPos(selectionStart), editor.offsetToPos(selectionEnd));
+      this.showNotice("Encrypted selected text.");
+    } catch (error) {
+      this.showNotice(`Encryption failed: ${messageFromError(error)}`);
     } finally {
       this.encrypting = false;
     }

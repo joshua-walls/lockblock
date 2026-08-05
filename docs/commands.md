@@ -8,6 +8,7 @@ Quick reference for the command palette.
 | Lockblock: Unlock | Prompts for your unlock password and keeps the decrypted vault key in memory for this session. |
 | Lockblock: Lock | Removes the decrypted vault key from memory and hides revealed blocks. |
 | Lockblock: Encrypt plaintext blocks in current note | Finds plaintext `lockblock` code blocks in the active note and replaces them with sealed Lockblock ciphertext. |
+| Lockblock: Encrypt selected text | Replaces the selected text with a sealed `lockblock` block. |
 | Lockblock: Insert empty block | Inserts an empty `lockblock` fenced code block at the cursor. |
 | Lockblock: Reveal selected block | Decrypts the selected block for viewing without changing the note. |
 | Lockblock: Copy selected block | Decrypts the selected block and copies the plaintext without needing to reveal it on screen. |

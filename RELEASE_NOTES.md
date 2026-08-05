@@ -1,3 +1,13 @@
+# Lockblock 0.3.15
+
+Lockblock `0.3.15` adds **Lockblock: Encrypt selected text**, allowing selected editor text to be replaced with a sealed `lockblock` block.
+
+## Highlights
+
+- Adds arbitrary selection-based encryption through the Obsidian command palette.
+- Preserves the existing AES-GCM sealed block format and keyring behavior.
+- Rejects empty selections and selections overlapping existing encrypted blocks.
+
 # Lockblock 0.3.14
 
 Lockblock `0.3.14` adds the reading-view **Encrypt** action for plaintext `lockblock` blocks. When the vault is locked, the action prompts for unlock before sealing the block through the existing encryption flow.
