@@ -7,8 +7,9 @@ import {
   setIcon,
   TFile,
 } from "obsidian";
+import { encryptPlaintextBlocksAtomically } from "./atomic-encryption";
 import { LOCKBLOCK_BLOCK_LANGUAGE } from "./constants";
-import { findEncryptedBlocks, formatPlaintextBlock, formatSealedBlock, parseSealedHeader, selectedBlock, serializeSealedHeader } from "./blocks";
+import { findEncryptedBlocks, formatPlaintextBlock, formatSealedBlock, parseSealedHeader, replaceBlockText, selectedBlock, selectionOverlapsSealedBlock, serializeSealedHeader } from "./blocks";
 import { decryptBlock, encryptBlock } from "./crypto";
 import { LockblockKeyring } from "./keyring";
 import { normalizeSettings } from "./settings";
@@ -691,10 +692,7 @@ export default class LockblockPlugin extends Plugin {
     }
 
     const markdown = editor.getValue();
-    const selectedBlock = findEncryptedBlocks(markdown).find(
-      (block) => block.header && selectionStart < block.to && selectionEnd > block.from,
-    );
-    if (selectedBlock) {
+    if (selectionOverlapsSealedBlock(markdown, selectionStart, selectionEnd)) {
       this.showNotice("Selected text is already inside an encrypted lockblock.");
       return;
     }
@@ -845,7 +843,7 @@ export default class LockblockPlugin extends Plugin {
       return;
     }
 
-    editor.replaceRange(formatPlaintextBlock(block, plaintext), editor.offsetToPos(block.from), editor.offsetToPos(block.to));
+    editor.replaceRange(plaintext, editor.offsetToPos(block.from), editor.offsetToPos(block.to));
     this.showNotice("Block decrypted to raw plaintext.");
   }
 
@@ -1020,6 +1018,11 @@ export default class LockblockPlugin extends Plugin {
         });
       }
 
+      createIconButton(actions, sessionUnlocked ? "Decrypt" : "Unlock and decrypt", "file-text").addEventListener("click", (event) => {
+        event.stopPropagation();
+        void this.decryptRenderedBlockToRaw(sourcePath, header);
+      });
+
       if (sessionUnlocked) {
         createIconButton(actions, "Lock", "lock").addEventListener("click", (event) => {
           event.stopPropagation();
@@ -1066,32 +1069,13 @@ export default class LockblockPlugin extends Plugin {
   }
 
   private async encryptRenderedPlaintextBlockAsync(file: TFile): Promise<void> {
-    if (!this.keyring.session) {
-      return;
-    }
-
-    const markdown = await this.app.vault.read(file);
-    const plaintextBlocks = findEncryptedBlocks(markdown).filter((block) => !block.sealed && block.body.trim().length > 0);
-    if (plaintextBlocks.length === 0) {
-      this.scheduleMarkdownRefresh();
-      return;
-    }
-
-    const replacements: Array<{ block: EncryptedBlock; replacement: string }> = [];
-    for (const block of plaintextBlocks) {
-      if (!this.keyring.session) {
-        return;
-      }
-      const sealed = await encryptBlock(block.body, this.keyring.session.vaultKey, this.keyring.session.kid);
-      replacements.push({ block, replacement: formatSealedBlock(block, serializeSealedHeader(sealed)) });
-    }
-
-    let nextMarkdown = markdown;
-    for (const { block, replacement } of replacements.reverse()) {
-      nextMarkdown = `${nextMarkdown.slice(0, block.from)}${replacement}${nextMarkdown.slice(block.to)}`;
-    }
-
-    await this.app.vault.modify(file, nextMarkdown);
+    await encryptPlaintextBlocksAtomically(
+      {
+        read: () => this.app.vault.read(file),
+        process: (transform) => this.app.vault.process(file, transform),
+      },
+      () => this.keyring.session,
+    );
     this.scheduleMarkdownRefresh();
   }
 
@@ -1121,6 +1105,57 @@ export default class LockblockPlugin extends Plugin {
 
     await navigator.clipboard.writeText(value);
     this.showNotice("Copied decrypted block.");
+  }
+
+  private async decryptRenderedBlockToRaw(sourcePath: string, header: SealedBlockHeader): Promise<void> {
+    if (this.settings.confirmDecryptToRaw) {
+      const confirmed = await confirmAction(
+        this.app,
+        "Decrypt to raw plaintext?",
+        "This will replace sealed ciphertext in the note with readable plaintext.",
+        "Decrypt to raw",
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    const file = this.app.vault.getFileByPath(sourcePath);
+    if (!(file instanceof TFile)) {
+      this.showNotice("Could not find note to decrypt.");
+      return;
+    }
+
+    const plaintext = await this.decryptHeader(header);
+    if (plaintext === null) {
+      return;
+    }
+
+    let replaced = false;
+    try {
+      await this.app.vault.process(file, (markdown) => {
+        const block = findEncryptedBlocks(markdown).find(
+          (candidate) => candidate.header?.kid === header.kid && candidate.header.ct === header.ct,
+        );
+        if (!block) {
+          return markdown;
+        }
+
+        replaced = true;
+        return replaceBlockText(markdown, block, plaintext);
+      });
+    } catch (error) {
+      this.showNotice(`Could not decrypt lockblock: ${messageFromError(error)}`);
+      return;
+    }
+
+    if (!replaced) {
+      this.showNotice("Lockblock changed before it could be decrypted. Try again.");
+      return;
+    }
+
+    this.scheduleMarkdownRefresh();
+    this.showNotice("Block decrypted to raw plaintext.");
   }
 
   private hideRevealedBlocks(showNotice = true): void {

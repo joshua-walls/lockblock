@@ -1,3 +1,9 @@
+# 0.3.16
+
+## Fixed
+
+- Decrypting a sealed block to raw plaintext now removes the `lockblock` fence instead of leaving plaintext inside a re-sealable block.
+
 # 0.3.15
 
 ## Added

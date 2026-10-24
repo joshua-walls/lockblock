@@ -25,6 +25,19 @@ export default defineConfig([
     },
   },
   {
+    files: ["tests/**/*.{ts,mjs}"],
+    rules: {
+      "@typescript-eslint/no-floating-promises": "off",
+      "obsidianmd/no-nodejs-modules": "off",
+    },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
+    rules: {
+      "obsidianmd/no-nodejs-modules": "off",
+    },
+  },
+  {
     files: ["manifest.json", "tsconfig.json", "versions.json"],
     language: "json/json",
     plugins: {

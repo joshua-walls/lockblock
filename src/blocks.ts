@@ -66,6 +66,10 @@ export function formatPlaintextBlock(block: EncryptedBlock, plaintext: string): 
   return `${formatLockblockOpenFence(block.openFence)}\n${plaintext}\n${closeFence}`;
 }
 
+export function replaceBlockText(markdown: string, block: EncryptedBlock, replacement: string): string {
+  return `${markdown.slice(0, block.from)}${replacement}${markdown.slice(block.to)}`;
+}
+
 export function serializeSealedHeader(header: SealedBlockHeader): string {
   return `${SEALED_PREFIX}kid=${header.kid}:alg=${header.alg}:iv=${header.iv}:ct=${header.ct}`;
 }
@@ -101,6 +105,14 @@ export function selectedBlock(markdown: string, selectionStart: number, selectio
   const selectionMin = Math.min(selectionStart, selectionEnd);
   const selectionMax = Math.max(selectionStart, selectionEnd);
   return findEncryptedBlocks(markdown).find((block) => selectionMin >= block.from && selectionMax <= block.to) ?? null;
+}
+
+export function selectionOverlapsSealedBlock(markdown: string, selectionStart: number, selectionEnd: number): boolean {
+  const selectionMin = Math.min(selectionStart, selectionEnd);
+  const selectionMax = Math.max(selectionStart, selectionEnd);
+  return findEncryptedBlocks(markdown).some(
+    (block) => block.header !== null && selectionMin < block.to && selectionMax > block.from,
+  );
 }
 
 function isEncryptedFence(info: string): boolean {
