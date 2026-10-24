@@ -18,7 +18,7 @@ jobs:
       (github.event.pull_request.merged == true &&
        github.base_ref == 'main' &&
        startsWith(github.head_ref, 'release/'))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: write
@@ -48,7 +48,7 @@ jobs:
           ref: ${{ steps.release_ref.outputs.checkout_ref }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: "npm"
@@ -83,7 +83,7 @@ jobs:
           subject-path: styles.css
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.release_ref.outputs.tag }}
           body_path: RELEASE_NOTES.md
