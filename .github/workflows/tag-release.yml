@@ -56,6 +56,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Test
+        run: npm test
+
       - name: Obsidian lint
         run: npm run lint:obsidian
 

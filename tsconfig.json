@@ -17,5 +17,5 @@
     "lib": ["ES2018", "DOM"],
     "noEmit": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

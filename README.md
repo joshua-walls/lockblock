@@ -39,7 +39,7 @@ lockblock:v1:kid=7b9d5d9a-2f70-4cc9-8e77-08713d8b93d6:alg=AES-GCM:iv=<base64url>
 ```
 ````
 
-In reading view, sealed blocks render as Lockblock cards with actions to show, hide, copy, or lock. Showing a block reveals plaintext in the UI only; it does not write plaintext back to the note.
+In reading view, sealed blocks render as Lockblock cards with actions to show, hide, copy, decrypt to raw plaintext, or lock. Showing a block reveals plaintext in the UI only; it does not write plaintext back to the note. Decrypting to raw plaintext replaces the sealed block in the note and follows the confirmation setting.
 
 In source or live preview editing, sealed blocks are editable only after the vault is unlocked. If the vault is locked, Lockblock blocks edits that touch sealed ciphertext and offers an unlock action.
 

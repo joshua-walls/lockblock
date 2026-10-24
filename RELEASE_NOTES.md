@@ -1,3 +1,12 @@
+# Lockblock 0.3.16
+
+Lockblock `0.3.16` fixes raw decryption so plaintext replaces the sealed block completely.
+
+## Highlights
+
+- Removes the `lockblock` fence when decrypting to raw plaintext.
+- Preserves existing sealed block and keyring compatibility.
+
 # Lockblock 0.3.15
 
 Lockblock `0.3.15` adds **Lockblock: Encrypt selected text**, allowing selected editor text to be replaced with a sealed `lockblock` block.
